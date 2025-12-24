@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Maharashtra Smart Agriculture</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; background: linear-gradient(135deg, #e6f5ea, #f4f4f4); margin:0; padding:40px; }
+        h2 { color:#0a7e8c; margin-bottom:10px; }
+        h3 { margin-bottom:8px; color:#333; }
+        .container { display:flex; justify-content:center; gap:30px; flex-wrap:wrap; }
+        .card { background:white; width:420px; padding:25px; border-radius:15px; box-shadow:0 8px 20px rgba(0,0,0,0.12); }
+        input[type="file"], input[type="text"] { width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #ccc; }
+        button { width:100%; padding:12px; margin-top:15px; background:#0a7e8c; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; transition:0.3s; }
+        button:hover { background:#06626c; }
+        img { width:100%; margin-top:15px; border-radius:12px; border:1px solid #ddd; }
+        .result-box { background:#f7fbf9; padding:15px; border-radius:10px; margin-top:15px; text-align:left; }
+        ul { padding-left:20px; } li { margin-bottom:6px; }
+        .error { color:red; font-weight:bold; margin-top:10px; }
+        .water-card { margin-top:30px; background:#e0f7fa; padding:20px; border-radius:12px; }
+    </style>
+</head>
+
+<body>
+<h2 align="center">🌾 Maharashtra Smart Agriculture System</h2>
+<p align="center">Weed Detection + Weather-Based Crop Recommendation + Water Management</p>
+
+<div class="container">
+    <!-- LEFT CARD: WEED DETECTION -->
+    <div class="card">
+        <h3>🌿 Weed Detection</h3>
+        <form action="/" method="POST" enctype="multipart/form-data">
+            <label>Upload Crop Image</label>
+            <input type="file" name="image">
+            <button type="submit">Detect Weeds</button>
+        </form>
+        {% if result %}
+        <div class="result-box">
+            <h4>🧪 Detection Result</h4>
+            <img src="{{ result }}">
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT CARD: WEATHER & CROP -->
+    <div class="card">
+        <h3>🌦️ Maharashtra Weather & Crop Advice</h3>
+        <form action="/" method="POST">
+            <label>Enter Maharashtra City</label>
+            <input type="text" name="city" placeholder="Pune, Nagpur, Nashik">
+            <button type="submit">Get Recommendation</button>
+        </form>
+
+        {% if weather and weather.error %}
+            <p class="error">{{ weather.error }}</p>
+        {% endif %}
+
+        {% if weather and not weather.error %}
+        <div class="result-box">
+            <h4>📍 Weather in {{ weather.city }}</h4>
+            <p>🌡 Temperature: <b>{{ weather.temp }} °C</b></p>
+            <p>💧 Humidity: <b>{{ weather.humidity }}%</b></p>
+            <p>🌧 Rainfall: <b>{{ weather.rainfall }} mm</b></p>
+
+            <h4>🌾 Suitable Crops & Soil</h4>
+            <ul>
+                {% for crop in crops %}
+                    <li>{{ crop }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- WATER MANAGEMENT -->
+<!-- WATER MANAGEMENT -->
+{% if water %}
+<div style="width:100%; max-width:900px; margin:40px auto; background:#e0f7fa; padding:25px; border-radius:12px;">
+    
+    <!-- Advisory Heading -->
+    <h3 style="text-align:center; margin-bottom:20px;">💧 Water Management Advisory</h3>
+
+    <!-- Advisory Details -->
+    <ul style="list-style:none; padding-left:0; text-align:left; margin-bottom:30px;">
+        <li><b>Rainfall Status:</b> {{ water.status }}</li>
+        <li><b>Irrigation Advice:</b> {{ water.irrigation }}</li>
+        <li><b>Water Source:</b> {{ water.source }}</li>
+        <li><b>Precautions:</b> {{ water.warning }}</li>
+    </ul>
+
+    <!-- Nearby Water Bodies -->
+    {% if water.details %}
+    <h4 style="text-align:center; margin-bottom:15px;">🌊 Nearby Water Bodies</h4>
+    <div id="water-map" style="height:400px; width:100%; border-radius:12px;"></div>
+
+    <script>
+        // Initialize map centered on the first water body
+        var map = L.map('water-map').setView([{{ water.details[0].lat }}, {{ water.details[0].lon }}], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add markers for all nearby water bodies
+        {% for wb in water.details %}
+        L.marker([{{ wb.lat }}, {{ wb.lon }}]).addTo(map)
+            .bindPopup("<b>{{ wb.name }}</b><br>Distance: {{ wb.distance }} km");
+        {% endfor %}
+    </script>
+    {% endif %}
+</div>
+{% endif %}
+
+
+</body>
+</html>
