@@ -4,6 +4,7 @@ from ultralytics import YOLO
 import uuid
 import requests
 import math
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -17,6 +18,12 @@ os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
 # Load trained YOLO model
 model = YOLO(r"C:\Users\Mishka\OneDrive\Desktop\weed-detection\best.pt")
 
+# Load vendor data
+vendor_df = pd.read_csv(
+    r"C:\Users\Mishka\OneDrive\Desktop\weed-detection\vendors.csv",
+)
+vendor_df.columns = vendor_df.columns.str.strip()
+
 # OpenWeatherMap API key
 WEATHER_API_KEY = "1386efe894b89f35ed2ba12db37f9c44"
 
@@ -27,7 +34,7 @@ MAHARASHTRA_CITIES = [
     "jalgaon", "akola", "amravati", "latur",
     "nanded", "beed", "parbhani", "hingoli",
     "wardha", "chandrapur", "gondia", "bhandara",
-    "ratnagiri", "sindhudurg", "ahmednagar", "dhule"
+    "ratnagiri", "sindhudurg", "ahmednagar", "dhule", "thane"
 ]
 
 # ---------------- CROP LOGIC ----------------
@@ -142,6 +149,11 @@ def water_management_advice(rainfall, water_bodies):
         "source": source,
         "details": water_bodies
     }
+    
+def get_vendors_by_city(city):
+    filtered = vendor_df[vendor_df["City"].str.lower() == city.lower()]
+    return filtered.to_dict(orient="records")
+    
 
 # ---------------- ROUTE ----------------
 @app.route("/", methods=["GET", "POST"])
@@ -150,6 +162,7 @@ def index():
     weather_data = None
     crops = []
     water_advice = None
+    vendors = []
 
     if request.method == "POST":
 
@@ -169,6 +182,7 @@ def index():
         city = request.form.get("city")
         if city:
             city = city.lower().strip()
+            vendors = get_vendors_by_city(city)
             if city not in MAHARASHTRA_CITIES:
                 weather_data = {"error": "Enter Maharashtra city only"}
             else:
@@ -196,6 +210,7 @@ def index():
 
     return render_template(
         "index.html",
+        vendors=vendors,
         result=result_image,
         weather=weather_data,
         crops=crops,
